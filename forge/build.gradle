@@ -5,6 +5,8 @@ plugins {
     id "com.modrinth.minotaur" version "2.+"
 }
 
+version = '1.0'
+
 loom {
     forge {
         mixinConfig "bettercombat.mixins.json"
@@ -81,12 +83,12 @@ components.java {
     }
 }
 
-publishing{
+publishing {
     repositories {
-        maven{
+        maven {
             name = "Better Combat Arcanacraft Packages"
             url = "https://maven.pkg.github.com/rhbal/BetterCombatArcanacraft"
-            credentials{
+            credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
             }
@@ -94,7 +96,7 @@ publishing{
     }
 }
 
-if(project.hasProperty('release_type')) {
+if (project.hasProperty('release_type')) {
     tasks.register("publishMod") {
         dependsOn(build)
     }

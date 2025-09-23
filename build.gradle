@@ -1,8 +1,10 @@
+
 buildscript {
     configurations.classpath {
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     }
 }
+
 
 plugins {
     id "architectury-plugin" version "3.4-SNAPSHOT"
@@ -13,6 +15,11 @@ plugins {
     id "com.modrinth.minotaur" version "2.+"
     id "maven-publish"
 }
+
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+
+version = '1.0'
 
 architectury {
     minecraft = rootProject.minecraft_version
