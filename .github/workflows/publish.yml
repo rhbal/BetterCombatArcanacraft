@@ -18,8 +18,8 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Print project version
-        run: ./gradlew properties | grep -E 'group:|version:'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --refresh-dependencies publish
       - name: Publish package
         uses: gradle/gradle-build-action@67421db6bd0bf253fb4bd25b31ebb98943c375e1
         with:
