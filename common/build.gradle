@@ -13,6 +13,8 @@ repositories {
     }
 }
 
+version = '0.0.1'
+
 dependencies {
     compileOnly(annotationProcessor("io.github.llamalad7:mixinextras-common:${project.mixin_extras_version}"))
 
