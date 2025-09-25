@@ -300,7 +300,30 @@ public final class WeaponAttributes {
         /**
          * Fulfilled if the player is not riding any entity
          */
-        NOT_MOUNTED
+        NOT_MOUNTED,
+        /**
+         * Fulfilled if the player is move to left
+         */
+        LEFT_MOVE,
+        /**
+         * Fulfilled if the player is move to right
+         */
+        RIGHT_MOVE,
+        /**
+         * Fulfilled if the player is move to up
+         */
+        UP_MOVE,
+        /**
+         * Fulfilled if the player is move to bottom
+         */
+        BOTTOM_MOVE,
+        /**
+         * Fulfilled if the player is move to bottom
+         */
+        NOT_MOVE
+        /**
+         * Fulfilled if the player isn't move
+         */
     }
 
     /**

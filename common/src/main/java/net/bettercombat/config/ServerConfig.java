@@ -55,7 +55,7 @@ public class ServerConfig implements ConfigData {
     @Comment("Allows client-side target search to ignore obstacles. WARNING! Setting this to `false` significantly increases the load on clients.")
     public boolean allow_attacking_thru_walls = false;
     @Comment("Applies movement speed multiplier while attacking. (Min: 0, Max: 1). Use `0` for a full stop while attacking. Use `1` for no movement speed penalty")
-    public float movement_speed_while_attacking = 0.5F;
+    public float movement_speed_while_attacking = 1F;
     @Comment("Determines if applying the movement speed multiplier while attacking is done smoothly or instantly")
     public boolean movement_speed_applied_smoothly = true;
     @Comment("Determines whether or not to apply movement speed reduction while attacking mounted")

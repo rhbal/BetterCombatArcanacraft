@@ -5,10 +5,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import net.bettercombat.BetterCombat;
-import net.bettercombat.logic.PlayerAttackHelper;
-import net.bettercombat.logic.PlayerAttackProperties;
-import net.bettercombat.logic.TargetHelper;
-import net.bettercombat.logic.WeaponRegistry;
+import net.bettercombat.logic.*;
 import net.bettercombat.logic.knockback.ConfigurableKnockback;
 import net.bettercombat.mixin.LivingEntityAccessor;
 import net.bettercombat.utils.MathHelper;
@@ -56,6 +53,16 @@ public class ServerNetwork {
             sender.sendPacket(Packets.WeaponRegistrySync.ID, WeaponRegistry.getEncodedRegistry());
             sender.sendPacket(Packets.ConfigSync.ID, configSerialized);
         });
+
+        ServerPlayNetworking.registerGlobalReceiver(Packets.C2S_KeyInput.ID,((server, player, handler, buf, responseSender) -> {
+            if (player == null) return;
+            final var packet = Packets.C2S_KeyInput.read(buf);
+            PlayerInputState rate = PlayerInputState.get(player.getUuid());
+            long now = System.currentTimeMillis();
+            if (now - rate.getLastUpdateMs() < 80) return;
+            rate.setLastUpdateMs(now);
+            rate.setMask(packet.mask());
+        }));
 
         ServerPlayNetworking.registerGlobalReceiver(Packets.AttackAnimation.ID, (server, player, handler, buf, responseSender) -> {
             ServerWorld world = Iterables.tryFind(server.getWorlds(), (element) -> element == player.getWorld())

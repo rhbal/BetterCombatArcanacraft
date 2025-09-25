@@ -4,6 +4,7 @@
     "category": "sword",
     "attacks": [
       {
+        "conditions": ["UP_MOVE"],
         "hitbox": "HORIZONTAL_PLANE",
         "damage_multiplier": 1,
         "angle": 120,
@@ -14,6 +15,18 @@
         }
       },
       {
+        "conditions": ["RIGHT_MOVE"],
+        "hitbox": "HORIZONTAL_PLANE",
+        "damage_multiplier": 1,
+        "angle": 120,
+        "upswing": 0.5,
+        "animation": "bettercombat:one_handed_slash_horizontal_right",
+        "swing_sound": {
+          "id": "bettercombat:sword_slash"
+        }
+      },
+      {
+        "conditions": ["LEFT_MOVE"],
         "hitbox": "HORIZONTAL_PLANE",
         "damage_multiplier": 1,
         "angle": 120,
@@ -24,11 +37,24 @@
         }
       },
       {
+        "conditions": ["BOTTOM_MOVE"],
         "hitbox": "FORWARD_BOX",
         "damage_multiplier": 1,
         "angle": 0,
         "upswing": 0.5,
         "animation": "bettercombat:one_handed_stab",
+        "swing_sound": {
+          "id": "bettercombat:sword_slash",
+          "pitch": 1.2
+        }
+      },
+      {
+        "conditions": ["NOT_MOVE"],
+        "hitbox": "FORWARD_BOX",
+        "damage_multiplier": 1,
+        "angle": 0,
+        "upswing": 0.5,
+        "animation": "bettercombat:one_handed_slash_horizontal_right",
         "swing_sound": {
           "id": "bettercombat:sword_slash",
           "pitch": 1.2

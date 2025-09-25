@@ -7,17 +7,22 @@ import net.bettercombat.api.WeaponAttributes;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ShieldItem;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
 
 import static net.minecraft.entity.EquipmentSlot.MAINHAND;
 
 public class PlayerAttackHelper {
+
+    public static final Logger LOGGER = LogManager.getLogger(PlayerAttackHelper.class);
+
     public static float getDualWieldingAttackDamageMultiplier(PlayerEntity player, AttackHand hand) {
         return isDualWielding(player)
                 ? (hand.isOffHand()
-                    ? BetterCombat.config.dual_wielding_off_hand_damage_multiplier
-                    : BetterCombat.config.dual_wielding_main_hand_damage_multiplier)
+                ? BetterCombat.config.dual_wielding_off_hand_damage_multiplier
+                : BetterCombat.config.dual_wielding_main_hand_damage_multiplier)
                 : 1;
     }
 
@@ -47,7 +52,7 @@ public class PlayerAttackHelper {
 
     public static AttackHand getCurrentAttack(PlayerEntity player, int comboCount) {
         if (isDualWielding(player)) {
-            boolean isOffHand = shouldAttackWithOffHand(player,comboCount);
+            boolean isOffHand = shouldAttackWithOffHand(player, comboCount);
             var itemStack = isOffHand
                     ? player.getOffHandStack()
                     : player.getMainHandStack();
@@ -72,15 +77,16 @@ public class PlayerAttackHelper {
         return null;
     }
 
-    private record AttackSelection(WeaponAttributes.Attack attack, ComboState comboState) { }
+    private record AttackSelection(WeaponAttributes.Attack attack, ComboState comboState) {
+    }
 
     private static AttackSelection selectAttack(int comboCount, WeaponAttributes attributes, PlayerEntity player, boolean isOffHandAttack) {
         var attacks = attributes.attacks();
         attacks = Arrays.stream(attacks)
                 .filter(attack ->
                         attack.conditions() == null
-                        || attack.conditions().length == 0
-                        || evaluateConditions(attack.conditions(), player, isOffHandAttack)
+                                || attack.conditions().length == 0
+                                || evaluateConditions(attack.conditions(), player, isOffHandAttack)
                 )
                 .toArray(WeaponAttributes.Attack[]::new);
         if (comboCount < 0) {
@@ -98,6 +104,7 @@ public class PlayerAttackHelper {
         if (condition == null) {
             return true;
         }
+        var mask = PlayerInputState.get(player.getUuid()).getMask();
         switch (condition) {
             case NOT_DUAL_WIELDING -> {
                 return !isDualWielding(player);
@@ -125,16 +132,20 @@ public class PlayerAttackHelper {
             }
             case NO_OFFHAND_ITEM -> {
                 var offhandStack = player.getOffHandStack();
-                if(offhandStack == null || offhandStack.isEmpty()) {{
-                    return true;
-                }}
+                if (offhandStack == null || offhandStack.isEmpty()) {
+                    {
+                        return true;
+                    }
+                }
                 return false;
             }
             case OFF_HAND_SHIELD -> {
                 var offhandStack = player.getOffHandStack();
-                if(offhandStack != null || offhandStack.getItem() instanceof ShieldItem) {{
-                    return true;
-                }}
+                if (offhandStack != null || offhandStack.getItem() instanceof ShieldItem) {
+                    {
+                        return true;
+                    }
+                }
                 return false;
             }
             case MAIN_HAND_ONLY -> {
@@ -148,6 +159,30 @@ public class PlayerAttackHelper {
             }
             case NOT_MOUNTED -> {
                 return player.getVehicle() == null;
+            }
+            case UP_MOVE -> {
+                return InputBits.w(mask);
+            }
+            case BOTTOM_MOVE -> {
+                return InputBits.s(mask) &&
+                        !InputBits.w(mask);
+            }
+            case LEFT_MOVE -> {
+                return InputBits.a(mask) &&
+                        !InputBits.w(mask) &&
+                        !InputBits.s(mask);
+            }
+            case RIGHT_MOVE -> {
+                return InputBits.d(mask) &&
+                        !InputBits.a(mask) &&
+                        !InputBits.s(mask) &&
+                        !InputBits.w(mask);
+            }
+            case NOT_MOVE -> {
+                return !InputBits.w(mask) &&
+                        !InputBits.a(mask) &&
+                        !InputBits.s(mask) &&
+                        !InputBits.d(mask);
             }
         }
         return true;

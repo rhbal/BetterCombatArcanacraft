@@ -4,14 +4,36 @@ import com.google.gson.Gson;
 import net.bettercombat.BetterCombat;
 import net.bettercombat.config.ServerConfig;
 import net.bettercombat.logic.AnimatedHand;
+import net.bettercombat.logic.PlayerInputState;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 public class Packets {
+    public record C2S_KeyInput(int mask, long timeMillis) {
+
+        public static Identifier ID = new Identifier(BetterCombat.MODID, "network");
+        public static boolean UseVanillaPacket = true;
+
+        public PacketByteBuf write() {
+            PacketByteBuf buffer = PacketByteBufs.create();
+            buffer.writeInt(mask);
+            buffer.writeLong(timeMillis);
+            return buffer;
+        }
+        public static C2S_KeyInput read(PacketByteBuf buffer) {
+            int mask = buffer.readInt();
+            long timeMillis = buffer.readLong();
+            return new C2S_KeyInput(mask, timeMillis);
+        }
+    }
+
+
     public record C2S_AttackRequest(int comboCount, boolean isSneaking, int selectedSlot, int[] entityIds) {
         public C2S_AttackRequest(int comboCount, boolean isSneaking, int selectedSlot, List<Entity> entities) {
             this(comboCount, isSneaking, selectedSlot, convertEntityList(entities));
