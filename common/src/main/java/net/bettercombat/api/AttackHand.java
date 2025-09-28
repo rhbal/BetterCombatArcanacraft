@@ -6,6 +6,7 @@ import net.minecraft.util.math.MathHelper;
 
 public record AttackHand(
         WeaponAttributes.Attack attack,
+        WeaponAttributes.Block block,
         ComboState combo,
         boolean isOffHand,
         WeaponAttributes attributes,

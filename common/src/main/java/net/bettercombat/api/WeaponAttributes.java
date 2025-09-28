@@ -74,6 +74,21 @@ public final class WeaponAttributes {
      * The properties of inherited attack objects can be overridden.
      */
     private final Attack[] attacks;
+    /**
+     * Specifies the sequence of blocks following each other, when the user is blocking continuously.
+     * (When last attack of the sequence is reached, it restarts)
+     * With a sequence of different attacks, you can create combos.
+     * Check out the member wise documentation of `Attack` (in this file), to see how they can be different.
+     *
+     * When using attribute inheritance, the inherited sequence of attacks can be reduced or extended.
+     * Example reducing (inherited attributes have a sequence of 3 attack):
+     *   "blocks": [ {}, {} ]
+     * Example of extending  (inherited attributes have a sequence of 2 attack):
+     *   "blocks": [ {}, {}, { ... my new fully parsable attack object ... } ]
+     * The properties of inherited attack objects can be overridden.
+     */
+    //TODO rewrite docs
+    private final Block[] blocks;
 
     public WeaponAttributes(
             double attack_range,
@@ -81,13 +96,61 @@ public final class WeaponAttributes {
             @Nullable String off_hand_pose,
             Boolean isTwoHanded,
             String category,
-            Attack[] attacks) {
+            Attack[] attacks,
+            Block[] blocks) {
         this.attack_range = attack_range;
         this.pose = pose;
         this.off_hand_pose = off_hand_pose;
         this.two_handed = isTwoHanded;
         this.category = category;
         this.attacks = attacks;
+        this.blocks = blocks;
+    }
+
+    public static final class Block {
+        /**
+         * Conditions those need to be fulfilled for the block to be performed,
+         * otherwise the block is skipped.
+         * Conditions are in a logic AND (&&) relation.
+         *
+         * For no conditions use `null` or empty array.
+         */
+        private Condition[] conditions;
+        /**
+         * The attack animation to play.
+         * Value must be an identifier, formula: "namespace:resource".
+         * Example values:
+         *   "bettercombat:sword-slash"
+         *   "my-mod-id:my-sword-swing"
+         */
+        private String animation = null;
+
+        public Block() {
+        }
+
+        public Block(Condition[] conditions, String animation) {
+            this.conditions = conditions;
+            this.animation = animation;
+        }
+
+        public Condition[] conditions() {
+            return conditions;
+        }
+
+        public String animation() {
+            return animation;
+        }
+
+        public enum Condition {
+            /**
+             * Fulfilled if the player block
+             */
+            BLOCK_LEFT,
+            BLOCK_RIGHT,
+            BLOCK_UP,
+            BLOCK_BUTT,
+            BLOCK_DEFAULT
+        }
     }
 
     /**
@@ -318,12 +381,9 @@ public final class WeaponAttributes {
          */
         BOTTOM_MOVE,
         /**
-         * Fulfilled if the player is move to bottom
-         */
-        NOT_MOVE
-        /**
          * Fulfilled if the player isn't move
          */
+        NOT_MOVE
     }
 
     /**
@@ -447,6 +507,10 @@ public final class WeaponAttributes {
 
     public Attack[] attacks() {
         return attacks;
+    }
+
+    public Block[] blocks() {
+        return blocks;
     }
 
     @Override

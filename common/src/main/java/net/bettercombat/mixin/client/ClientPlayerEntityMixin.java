@@ -2,7 +2,7 @@ package net.bettercombat.mixin.client;
 
 import net.bettercombat.BetterCombat;
 import net.bettercombat.api.MinecraftClient_BetterCombat;
-import net.bettercombat.logic.PlayerInputState;
+import net.bettercombat.logic.InputManager;
 import net.bettercombat.network.Packets;
 import net.bettercombat.utils.MathHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -21,17 +21,6 @@ public class ClientPlayerEntityMixin {
 
     @Inject(method = "tickMovement", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/input/Input;tick(ZF)V", shift = At.Shift.AFTER))
     private void tickMovement_ModifyInput(CallbackInfo ci) {
-        int mask = generateMask(MinecraftClient.getInstance());
-        long now = System.currentTimeMillis();
-        boolean changed = (mask != lastMask);
-        boolean timeElapsed = (now - lastSent) >= SEND_INTERVAL_MS;
-
-        if (changed || (timeElapsed && mask != 0)) {
-            ClientPlayNetworking.send(
-                    Packets.C2S_KeyInput.ID,
-                    new Packets.C2S_KeyInput(mask, now).write()
-            );
-        }
         var config = BetterCombat.config;
         var multiplier = Math.min(Math.max(config.movement_speed_while_attacking, 0.0), 1.0);
 //        System.out.println("Multiplier " + multiplier);
@@ -59,14 +48,5 @@ public class ClientPlayerEntityMixin {
             clientPlayer.input.movementForward *= multiplier;
             clientPlayer.input.movementSideways *= multiplier;
         }
-    }
-
-    private static int generateMask(MinecraftClient mc) {
-        int mask = 0;
-        if (mc.options.forwardKey.isPressed())    mask |= (1 << 0); // W
-        if (mc.options.leftKey.isPressed())  mask |= (1 << 1); // A
-        if (mc.options.backKey.isPressed())  mask |= (1 << 2); // S
-        if (mc.options.rightKey.isPressed()) mask |= (1 << 3); // D
-        return mask;
     }
 }

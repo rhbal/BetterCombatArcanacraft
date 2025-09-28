@@ -23,9 +23,10 @@ public class WeaponAttributesHelper {
         var isTwoHanded = b.two_handed() != null ? b.two_handed() : a.two_handed();
         var category = b.category() != null ? b.category() : a.category();
         var attacks = a.attacks();
+        var blocks = a.blocks();
         if (b.attacks() != null && b.attacks().length > 0) {
             var overrideAttacks = new ArrayList<WeaponAttributes.Attack>();
-            for(int i = 0; i < b.attacks().length; ++i) {
+            for (int i = 0; i < b.attacks().length; ++i) {
                 var base = (a.attacks() != null && a.attacks().length > i)
                         ? a.attacks()[i]
                         : new WeaponAttributes.Attack(null, null, 0, 0, 0, null, null, null);
@@ -43,7 +44,21 @@ public class WeaponAttributesHelper {
             }
             attacks = overrideAttacks.toArray(new WeaponAttributes.Attack[0]);
         }
-        return new WeaponAttributes(attackRange, pose, off_hand_pose, isTwoHanded, category, attacks);
+        if (b.blocks() != null && b.blocks().length > 0) {
+            var overrideBlocks = new ArrayList<WeaponAttributes.Block>();
+            for (int i = 0; i < b.blocks().length; ++i) {
+                var base = (a.blocks() != null && a.blocks().length > i)
+                        ? a.blocks()[i]
+                        : new WeaponAttributes.Block(null, null);
+                var override = b.blocks()[i];
+                var block = new WeaponAttributes.Block(
+                        override.conditions() != null ? override.conditions() : base.conditions(),
+                        override.animation() != null ? override.animation() : base.animation());
+                overrideBlocks.add(block);
+            }
+            blocks = overrideBlocks.toArray(new WeaponAttributes.Block[0]);
+        }
+        return new WeaponAttributes(attackRange, pose, off_hand_pose, isTwoHanded, category, attacks, blocks);
     }
 
     public static void validate(WeaponAttributes attributes) throws Exception {
@@ -55,7 +70,7 @@ public class WeaponAttributesHelper {
             for (WeaponAttributes.Attack attack : attributes.attacks()) {
                 try {
                     validate(attack);
-                } catch(InvalidObjectException exception) {
+                } catch (InvalidObjectException exception) {
                     var message = "Invalid attack at index:" + index + " - " + exception.getMessage();
                     throw new InvalidObjectException(message);
                 }
@@ -83,13 +98,14 @@ public class WeaponAttributesHelper {
     }
 
     public static final String nbtTag = "weapon_attributes";
+
     public static WeaponAttributes readFromNBT(ItemStack itemStack) {
         var nbt = itemStack.getNbt();
-        var attributedItemStack = (ItemStackNBTWeaponAttributes) ((Object)itemStack);
+        var attributedItemStack = (ItemStackNBTWeaponAttributes) ((Object) itemStack);
         var string = nbt.getString(nbtTag);
         if (string != null && !string.isEmpty() && !attributedItemStack.hasInvalidAttributes()) {
             var cachedAttributes = attributedItemStack.getWeaponAttributes();
-            if(cachedAttributes != null) {
+            if (cachedAttributes != null) {
                 // System.out.println("NBT Attributes - Cache");
                 return cachedAttributes;
             }
@@ -115,7 +131,7 @@ public class WeaponAttributesHelper {
 
     public static void writeToNBT(ItemStack itemStack, AttributesContainer container) {
         Identifier itemId = Registries.ITEM.getId(itemStack.getItem());
-        var attributedItemStack = (ItemStackNBTWeaponAttributes) ((Object)itemStack);
+        var attributedItemStack = (ItemStackNBTWeaponAttributes) ((Object) itemStack);
         var nbt = itemStack.getNbt();
         try {
             var json = encode(container);
@@ -128,7 +144,8 @@ public class WeaponAttributesHelper {
         }
     }
 
-    private static Type attributesContainerFileFormat = new TypeToken<AttributesContainer>() {}.getType();
+    private static Type attributesContainerFileFormat = new TypeToken<AttributesContainer>() {
+    }.getType();
 
     public static AttributesContainer decode(Reader reader) {
         var gson = new Gson();

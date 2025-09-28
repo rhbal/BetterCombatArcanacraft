@@ -52,6 +52,11 @@ public abstract class AbstractClientPlayerEntityMixin extends PlayerEntity imple
         super(world, pos, yaw, gameProfile);
     }
 
+    @Override
+    public AttackAnimationSubStack getAttackAnimation() {
+        return attackAnimation;
+    }
+
     @Inject(method = "<init>", at = @At("TAIL"))
     private void postInit(ClientWorld world, GameProfile profile, CallbackInfo ci) {
         var stack = ((IAnimatedPlayer) this).getAnimationStack();

@@ -10,6 +10,7 @@ import net.bettercombat.api.WeaponAttributes;
 import net.bettercombat.api.client.BetterCombatClientEvents;
 import net.bettercombat.client.BetterCombatClient;
 import net.bettercombat.client.BetterCombatKeybindings;
+import net.bettercombat.client.animation.CustomAnimationPlayer;
 import net.bettercombat.client.animation.PlayerAttackAnimatable;
 import net.bettercombat.client.collision.TargetFinder;
 import net.bettercombat.config.ClientConfigWrapper;
@@ -33,6 +34,7 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -42,23 +44,36 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
+import java.util.Objects;
 
 import static net.minecraft.util.hit.HitResult.Type.BLOCK;
 
 @Mixin(MinecraftClient.class)
 public abstract class MinecraftClientInject implements MinecraftClient_BetterCombat {
-    @Shadow public ClientWorld world;
-    @Shadow @Nullable public ClientPlayerEntity player;
+    @Shadow
+    public ClientWorld world;
+    @Shadow
+    @Nullable
+    public ClientPlayerEntity player;
 
-    @Shadow private int itemUseCooldown;
+    @Shadow
+    private int itemUseCooldown;
 
-    @Shadow @Final public TextRenderer textRenderer;
+    @Shadow
+    @Final
+    public TextRenderer textRenderer;
 
-    @Shadow public int attackCooldown;
+    @Shadow
+    public int attackCooldown;
+
+    @Shadow
+    @Final
+    private static Logger LOGGER;
 
     private MinecraftClient thisClient() {
-        return (MinecraftClient)((Object)this);
+        return (MinecraftClient) ((Object) this);
     }
+
     private boolean isHoldingAttackInput = false;
     private boolean isHarvesting = false;
     private String textToRender = null;
@@ -70,7 +85,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     }
 
     // Targeting the method where all the disconnection related logic is.
-    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screen/Screen;)V",at = @At("TAIL"))
+    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screen/Screen;)V", at = @At("TAIL"))
     private void disconnect_TAIL(Screen screen, CallbackInfo ci) {
         BetterCombatClient.ENABLED = false;
     }
@@ -90,7 +105,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
                 if (!client.interactionManager.hasStatusBars()) {
                     k += 14;
                 }
-                if ((l = (int)((float)this.textFade * 256.0f / 10.0f)) > 255) {
+                if ((l = (int) ((float) this.textFade * 256.0f / 10.0f)) > 255) {
                     l = 255;
                 }
                 if (l > 0) {
@@ -110,7 +125,10 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     // Press to attack
     @Inject(method = "doAttack", at = @At("HEAD"), cancellable = true)
     private void pre_doAttack(CallbackInfoReturnable<Boolean> info) {
-        if (!BetterCombatClient.ENABLED) { return; }
+        if (!BetterCombatClient.ENABLED) {
+            return;
+        }
+
 
         MinecraftClient client = thisClient();
         WeaponAttributes attributes = WeaponRegistry.getAttributes(client.player.getMainHandStack());
@@ -119,7 +137,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
                 isHarvesting = true;
                 return;
             }
-            startUpswing(attributes);
+            startUpswing(attributes, true);
             info.setReturnValue(false);
             info.cancel();
         }
@@ -128,13 +146,16 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     // Hold to attack
     @Inject(method = "handleBlockBreaking", at = @At("HEAD"), cancellable = true)
     private void pre_handleBlockBreaking(boolean bl, CallbackInfo ci) {
-        if (!BetterCombatClient.ENABLED) { return; }
+        if (!BetterCombatClient.ENABLED) {
+            return;
+        }
 
         MinecraftClient client = thisClient();
         WeaponAttributes attributes = WeaponRegistry.getAttributes(client.player.getMainHandStack());
+
         if (attributes != null && attributes.attacks() != null) {
             boolean isPressed = client.options.attackKey.isPressed();
-            if(isPressed && !isHoldingAttackInput) {
+            if (isPressed && !isHoldingAttackInput) {
                 if (isTargetingMineableBlock() || isHarvesting) {
                     isHarvesting = true;
                     return;
@@ -145,7 +166,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
 
             if (BetterCombatClient.config.isHoldToAttackEnabled && isPressed) {
                 isHoldingAttackInput = true;
-                startUpswing(attributes);
+                startUpswing(attributes, true);
                 ci.cancel();
             } else {
                 isHarvesting = false;
@@ -156,13 +177,27 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
 
     @Inject(method = "doItemUse", at = @At("HEAD"), cancellable = true)
     private void pre_doItemUse(CallbackInfo ci) {
-        if (!BetterCombatClient.ENABLED) { return; }
+        if (!BetterCombatClient.ENABLED) {
+            return;
+        }
 
         var hand = getCurrentHand();
-        if (hand == null) { return; }
+        if (hand == null) {
+            return;
+        }
         double upswingRate = hand.upswingRate();
         if (upswingTicks > 0 || player.getAttackCooldownProgress(0) < (1.0 - upswingRate)) {
             ci.cancel();
+            return;
+        }
+
+        MinecraftClient client = thisClient();
+        WeaponAttributes attributes = WeaponRegistry.getAttributes(client.player.getMainHandStack());
+        if (attributes != null && attributes.blocks() != null) {
+            boolean blockIsPressed = client.options.useKey.isPressed();
+            if (blockIsPressed) {
+                startUpswing(attributes, false);
+            }
         }
     }
 
@@ -200,7 +235,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     }
 
     private boolean shouldSwingThruGrass() {
-        if(!BetterCombatClient.config.isSwingThruGrassEnabled) {
+        if (!BetterCombatClient.config.isSwingThruGrassEnabled) {
             return false;
         }
         var regex = BetterCombatClient.config.swingThruGrassBlacklist;
@@ -219,7 +254,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     private float lastSwingDuration = 0;
     private int comboReset = 0;
 
-    private void startUpswing(WeaponAttributes attributes) {
+    private void startUpswing(WeaponAttributes attributes, boolean isAttack) {
         // Guard conditions
 
         if (player.isRiding()) {
@@ -229,7 +264,9 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         }
 
         var hand = getCurrentHand();
-        if (hand == null) { return; }
+        if (hand == null) {
+            return;
+        }
         float upswingRate = (float) hand.upswingRate();
         if (upswingTicks > 0
                 || attackCooldown > 0
@@ -249,15 +286,29 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         float attackCooldownTicksFloat = PlayerAttackHelper.getAttackCooldownTicksCapped(player); // `getAttackCooldownProgressPerTick` should be called `getAttackCooldownLengthTicks`
         int attackCooldownTicks = Math.round(attackCooldownTicksFloat);
         this.comboReset = Math.round(attackCooldownTicksFloat * BetterCombat.config.combo_reset_rate);
-        this.upswingTicks = Math.max(Math.round(attackCooldownTicksFloat * upswingRate), 1); // At least 1 upswing ticks
         this.lastSwingDuration = attackCooldownTicksFloat;
         this.itemUseCooldown = attackCooldownTicks; // Vanilla MinecraftClient property for compatibility
         setMiningCooldown(attackCooldownTicks);
 //        System.out.println("Starting upswingTicks: " + upswingTicks);
-        String animationName = hand.attack().animation();
+        String animationName;
         boolean isOffHand = hand.isOffHand();
         var animatedHand = AnimatedHand.from(isOffHand, attributes.isTwoHanded());
-        ((PlayerAttackAnimatable) player).playAttackAnimation(animationName, animatedHand, attackCooldownTicksFloat, upswingRate);
+        var animatablePlayer = ((PlayerAttackAnimatable) player);
+        if (isAttack) {
+            this.upswingTicks = Math.max(Math.round(attackCooldownTicksFloat * upswingRate), 1); // At least 1 upswing ticks
+            animationName = hand.attack().animation();
+            animatablePlayer.playAttackAnimation(animationName, animatedHand, attackCooldownTicksFloat, upswingRate);
+        } else {
+            animationName = hand.block().animation();
+            var customAnimation = (CustomAnimationPlayer) animatablePlayer.getAttackAnimation().base.getAnimation();
+            var animationNameWithoutNamespace = "\"" + (animationName.indexOf(':') >= 0 ? animationName.substring(animationName.indexOf(':') + 1) : animationName).stripLeading() + "\"";
+            if (customAnimation == null ||
+                    !Objects.equals(customAnimation.getData().extraData.get("name"), animationNameWithoutNamespace) ||
+                    !animatablePlayer.getAttackAnimation().base.isActive()) {
+                animatablePlayer.playAttackAnimation(animationName, animatedHand, attackCooldownTicksFloat, upswingRate);
+            }
+        }
+
         ClientPlayNetworking.send(
                 Packets.AttackAnimation.ID,
                 new Packets.AttackAnimation(player.getId(), animatedHand, animationName, attackCooldownTicksFloat, upswingRate).write());
@@ -285,13 +336,13 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
 
     private void resetComboIfNeeded() {
         // Combo timeout
-        if(lastAttacked > comboReset && getComboCount() > 0) {
+        if (lastAttacked > comboReset && getComboCount() > 0) {
             setComboCount(0);
         }
         // Switching main-hand weapon
         if (!PlayerAttackHelper.shouldAttackWithOffHand(player, getComboCount())) {
-            if(player.getMainHandStack() == null
-                    || (lastAttacedWithItemStack != null && !lastAttacedWithItemStack.getItem().equals(player.getMainHandStack().getItem()) ) ) {
+            if (player.getMainHandStack() == null
+                    || (lastAttacedWithItemStack != null && !lastAttacedWithItemStack.getItem().equals(player.getMainHandStack().getItem()))) {
                 setComboCount(0);
             }
         }
@@ -300,7 +351,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     private List<Entity> targetsInReach = null;
 
     private boolean shouldUpdateTargetsInReach() {
-        if(BetterCombatClient.config.isHighlightCrosshairEnabled
+        if (BetterCombatClient.config.isHighlightCrosshairEnabled
                 || BetterCombatClient.config.isAttackInsteadOfMineWhenEnemiesCloseEnabled) {
             return targetsInReach == null;
         }
@@ -327,7 +378,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         }
     }
 
-    @Inject(method = "tick",at = @At("HEAD"))
+    @Inject(method = "tick", at = @At("HEAD"))
     private void pre_Tick(CallbackInfo ci) {
         if (player == null) {
             return;
@@ -340,11 +391,12 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         resetComboIfNeeded();
     }
 
-    @Inject(method = "tick",at = @At("TAIL"))
+    @Inject(method = "tick", at = @At("TAIL"))
     private void post_Tick(CallbackInfo ci) {
         if (player == null) {
             return;
         }
+        InputManager.sendUpdateToServer();
         if (BetterCombatKeybindings.toggleMineKeyBinding.wasPressed()) {
             BetterCombatClient.config.isMiningWithWeaponsEnabled = !BetterCombatClient.config.isMiningWithWeaponsEnabled;
             AutoConfig.getConfigHolder(ClientConfigWrapper.class).save();
@@ -365,7 +417,9 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         }
 
         var hand = getCurrentHand();
-        if (hand == null) { return; }
+        if (hand == null) {
+            return;
+        }
         var attack = hand.attack();
         var upswingRate = hand.upswingRate();
         if (player.getAttackCooldownProgress(0) < (1.0 - upswingRate)) {
@@ -380,7 +434,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
                 attack,
                 hand.attributes().attackRange());
         updateTargetsInReach(targets);
-        if(targets.size() == 0) {
+        if (targets.size() == 0) {
             PlatformClient.onEmptyLeftClick(player);
         }
 
@@ -389,7 +443,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         ClientPlayNetworking.send(
                 Packets.C2S_AttackRequest.ID,
                 new Packets.C2S_AttackRequest(getComboCount(), player.isSneaking(), player.getInventory().selectedSlot, targets).write());
-        for (var target: targets) {
+        for (var target : targets) {
             player.attack(target);
         }
         player.resetLastAttackedTicks();
@@ -408,7 +462,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     }
 
     private void setComboCount(int comboCount) {
-        ((PlayerAttackProperties)player).setComboCount(comboCount);
+        ((PlayerAttackProperties) player).setComboCount(comboCount);
     }
 
     private static boolean areItemStackEqual(ItemStack left, ItemStack right) {
@@ -427,7 +481,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     }
 
     private void cancelWeaponSwing() {
-        var downWind = (int)Math.round(PlayerAttackHelper.getAttackCooldownTicksCapped(player) * (1 - 0.5 * BetterCombat.config.upswing_multiplier));
+        var downWind = (int) Math.round(PlayerAttackHelper.getAttackCooldownTicksCapped(player) * (1 - 0.5 * BetterCombat.config.upswing_multiplier));
         ((PlayerAttackAnimatable) player).stopAttackAnimation(downWind);
         ClientPlayNetworking.send(
                 Packets.AttackAnimation.ID,
@@ -442,7 +496,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
 
     @Override
     public int getComboCount() {
-        return ((PlayerAttackProperties)player).getComboCount();
+        return ((PlayerAttackProperties) player).getComboCount();
     }
 
     @Override
@@ -455,7 +509,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         if (lastAttacked > lastSwingDuration || lastSwingDuration <= 0) {
             return 1F;
         }
-        return (float)lastAttacked / lastSwingDuration;
+        return (float) lastAttacked / lastSwingDuration;
     }
 
     @Override

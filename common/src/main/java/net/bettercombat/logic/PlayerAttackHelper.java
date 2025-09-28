@@ -60,24 +60,31 @@ public class PlayerAttackHelper {
             if (attributes != null && attributes.attacks() != null) {
                 int handSpecificComboCount = ((isOffHand && comboCount > 0) ? (comboCount - 1) : (comboCount)) / 2;
                 var attackSelection = selectAttack(handSpecificComboCount, attributes, player, isOffHand);
+                var blockSelection = selectBlock(attributes, player, isOffHand);
                 var attack = attackSelection.attack;
                 var combo = attackSelection.comboState;
-                return new AttackHand(attack, combo, isOffHand, attributes, itemStack);
+                var block = blockSelection.block;
+                return new AttackHand(attack, block, combo, isOffHand, attributes, itemStack);
             }
         } else {
             var itemStack = player.getMainHandStack();
             WeaponAttributes attributes = WeaponRegistry.getAttributes(itemStack);
             if (attributes != null && attributes.attacks() != null) {
                 var attackSelection = selectAttack(comboCount, attributes, player, false);
+                var blockSelection = selectBlock(attributes, player, false);
                 var attack = attackSelection.attack;
                 var combo = attackSelection.comboState;
-                return new AttackHand(attack, combo, false, attributes, itemStack);
+                var block = blockSelection.block;
+                return new AttackHand(attack, block, combo, false, attributes, itemStack);
             }
         }
         return null;
     }
 
     private record AttackSelection(WeaponAttributes.Attack attack, ComboState comboState) {
+    }
+
+    private record BlockSelection(WeaponAttributes.Block block) {
     }
 
     private static AttackSelection selectAttack(int comboCount, WeaponAttributes attributes, PlayerEntity player, boolean isOffHandAttack) {
@@ -94,6 +101,50 @@ public class PlayerAttackHelper {
         }
         int index = comboCount % attacks.length;
         return new AttackSelection(attacks[index], new ComboState(index + 1, attacks.length));
+    }
+
+    private static BlockSelection selectBlock(WeaponAttributes attributes, PlayerEntity player, boolean isOffHandAttack) {
+        var blocks = attributes.blocks();
+        blocks = Arrays.stream(blocks)
+                .filter(block ->
+                        block.conditions() == null
+                                || block.conditions().length == 0
+                                || evaluateBlockConditions(block.conditions(), player, isOffHandAttack)
+                )
+                .toArray(WeaponAttributes.Block[]::new);
+        return new BlockSelection(blocks[0]);
+    }
+
+    private static boolean evaluateBlockConditions(WeaponAttributes.Block.Condition[] conditions, PlayerEntity player, boolean isOffHandAttack) {
+        return Arrays.stream(conditions).allMatch(condition -> evaluateBlockCondition(condition, player, isOffHandAttack));
+    }
+
+    private static boolean evaluateBlockCondition(WeaponAttributes.Block.Condition condition, PlayerEntity player, boolean isOffHandAttack) {
+        if (condition == null) {
+            return true;
+        }
+        var mask = PlayerInputState.get(player.getUuid()).getMask();
+        switch (condition) {
+            case BLOCK_BUTT -> {
+                return InputManager.s(mask);
+            }
+            case BLOCK_LEFT -> {
+                return InputManager.a(mask);
+            }
+            case BLOCK_RIGHT -> {
+                return InputManager.d(mask);
+            }
+            case BLOCK_UP -> {
+                return InputManager.w(mask);
+            }
+            case BLOCK_DEFAULT -> {
+                return !InputManager.w(mask) &&
+                        !InputManager.a(mask) &&
+                        !InputManager.s(mask) &&
+                        !InputManager.d(mask);
+            }
+        }
+        return true;
     }
 
     private static boolean evaluateConditions(WeaponAttributes.Condition[] conditions, PlayerEntity player, boolean isOffHandAttack) {
@@ -160,29 +211,26 @@ public class PlayerAttackHelper {
             case NOT_MOUNTED -> {
                 return player.getVehicle() == null;
             }
-            case UP_MOVE -> {
-                return InputBits.w(mask);
-            }
-            case BOTTOM_MOVE -> {
-                return InputBits.s(mask) &&
-                        !InputBits.w(mask);
-            }
             case LEFT_MOVE -> {
-                return InputBits.a(mask) &&
-                        !InputBits.w(mask) &&
-                        !InputBits.s(mask);
+                return InputManager.a(mask);
             }
             case RIGHT_MOVE -> {
-                return InputBits.d(mask) &&
-                        !InputBits.a(mask) &&
-                        !InputBits.s(mask) &&
-                        !InputBits.w(mask);
+                return InputManager.d(mask) &&
+                        !InputManager.a(mask);
+            }
+            case UP_MOVE -> {
+                return InputManager.w(mask) &&
+                        !InputManager.a(mask) &&
+                        !InputManager.d(mask);
+            }
+            case BOTTOM_MOVE -> {
+                return InputManager.s(mask) &&
+                        !InputManager.w(mask) &&
+                        !InputManager.a(mask) &&
+                        !InputManager.d(mask);
             }
             case NOT_MOVE -> {
-                return !InputBits.w(mask) &&
-                        !InputBits.a(mask) &&
-                        !InputBits.s(mask) &&
-                        !InputBits.d(mask);
+                return InputManager.notMoved(mask);
             }
         }
         return true;
