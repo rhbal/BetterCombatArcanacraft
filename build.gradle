@@ -40,7 +40,7 @@ allprojects {
     apply plugin: "architectury-plugin"
 
     group = rootProject.maven_group
-    version = '0.0.3'
+    version = '0.0.4'
 
     tasks.withType(JavaCompile) {
         options.encoding = "UTF-8"
