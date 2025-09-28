@@ -3,8 +3,12 @@ package net.bettercombat.logic;
 import net.bettercombat.network.Packets;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public final class InputManager {
+    public static final Logger LOGGER = LogManager.getLogger(InputManager.class);
+
     private static int lastMask = 0;
     private static long lastSent = 0L;
     private static final long SEND_INTERVAL_MS = 150;
@@ -49,6 +53,8 @@ public final class InputManager {
                     Packets.C2S_KeyInput.ID,
                     new Packets.C2S_KeyInput(mask, now).write()
             );
+            var state = PlayerInputState.get(MinecraftClient.getInstance().player.getUuid());
+            state.setMask(mask);
         }
     }
 }
