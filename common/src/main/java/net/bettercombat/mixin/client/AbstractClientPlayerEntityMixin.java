@@ -152,7 +152,7 @@ public abstract class AbstractClientPlayerEntityMixin extends PlayerEntity imple
                     ));
             attackAnimation.mirror.setEnabled(mirror);
 
-            var player = new CustomAnimationPlayer(copy.build(), 0);
+            var player = new CustomAnimationPlayer(copy.build(), 0, name);
             player.setFirstPersonMode(
                     CompatibilityFlags.firstPersonRender() ?
                     FirstPersonMode.THIRD_PERSON_MODEL :

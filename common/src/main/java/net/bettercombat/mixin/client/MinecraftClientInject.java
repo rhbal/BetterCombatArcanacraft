@@ -267,14 +267,17 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         if (hand == null) {
             return;
         }
+
+        var state = PlayerInputState.get(player.getUuid());
         float upswingRate = (float) hand.upswingRate();
         if (upswingTicks > 0
                 || attackCooldown > 0
                 || player.isUsingItem()
-                || player.getAttackCooldownProgress(0) < (1.0 - upswingRate)) {
-//            double attackCooldownTicks = PlayerAttackHelper.getAttackCooldownTicksCapped(player) / PlayerAttackHelper.getDualWieldingAttackSpeedMultiplier(player);
-//            var currentCD = Math.round(attackCooldownTicks * player.getAttackCooldownProgress(0));
-//            System.out.println("Waiting for cooldown: " + currentCD + "/" + attackCooldownTicks);
+                || player.getAttackCooldownProgress(0) < (1.0 - upswingRate)
+                || (((PlayerAttackAnimatable) player).getAttackAnimation().name != null &&
+                ((PlayerAttackAnimatable) player).getAttackAnimation().name.contains("block") &&
+                ((PlayerAttackAnimatable) player).getAttackAnimation().name.contains(InputManager.asString(state.getMask())) &&
+                InputManager.rightClick(state.getMask()))) {
             return;
         }
 
@@ -322,7 +325,11 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         boolean isStopBlockingAnimation
                 = ((PlayerAttackAnimatable) player).getAttackAnimation().name != null &&
                 ((PlayerAttackAnimatable) player).getAttackAnimation().name.contains("block") &&
-                InputManager.rightClick(state.getMask());
+                !InputManager.rightClick(state.getMask());
+
+        boolean isChangeBlockingAnimation
+                = ((PlayerAttackAnimatable) player).getAttackAnimation().name != null &&
+                !((PlayerAttackAnimatable) player).getAttackAnimation().name.contains(InputManager.asString(state.getMask()));
 
         if (upswingStack != null && (!areItemStackEqual(player.getMainHandStack(), upswingStack) || isStopBlockingAnimation)) {
             cancelWeaponSwing();

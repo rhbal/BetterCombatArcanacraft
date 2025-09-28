@@ -57,4 +57,19 @@ public final class InputManager {
             state.setMask(mask);
         }
     }
+
+
+    public static String asString(int mask){
+        var vector = "up";
+        if (InputManager.d(mask)){
+            return vector = "right";
+        } else if (InputManager.a(mask)){
+            return vector = "left";
+        } else if (InputManager.w(mask)){
+            return vector = "up";
+        } else if (InputManager.s(mask)){
+            return vector = "butt";
+        }
+        return vector;
+    }
 }
