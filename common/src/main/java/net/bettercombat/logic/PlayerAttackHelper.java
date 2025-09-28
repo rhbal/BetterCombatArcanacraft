@@ -60,10 +60,13 @@ public class PlayerAttackHelper {
             if (attributes != null && attributes.attacks() != null) {
                 int handSpecificComboCount = ((isOffHand && comboCount > 0) ? (comboCount - 1) : (comboCount)) / 2;
                 var attackSelection = selectAttack(handSpecificComboCount, attributes, player, isOffHand);
-                var blockSelection = selectBlock(attributes, player, isOffHand);
+                BlockSelection blockSelection = null;
+                if(attributes.blocks() != null) {
+                    blockSelection = selectBlock(attributes, player, isOffHand);
+                }
                 var attack = attackSelection.attack;
                 var combo = attackSelection.comboState;
-                var block = blockSelection.block;
+                WeaponAttributes.Block block = blockSelection == null ? null : blockSelection.block;
                 return new AttackHand(attack, block, combo, isOffHand, attributes, itemStack);
             }
         } else {
@@ -71,10 +74,13 @@ public class PlayerAttackHelper {
             WeaponAttributes attributes = WeaponRegistry.getAttributes(itemStack);
             if (attributes != null && attributes.attacks() != null) {
                 var attackSelection = selectAttack(comboCount, attributes, player, false);
-                var blockSelection = selectBlock(attributes, player, false);
+                BlockSelection blockSelection = null;
+                if(attributes.blocks() != null) {
+                    blockSelection = selectBlock(attributes, player, false);
+                }
                 var attack = attackSelection.attack;
                 var combo = attackSelection.comboState;
-                var block = blockSelection.block;
+                WeaponAttributes.Block block = blockSelection == null ? null : blockSelection.block;
                 return new AttackHand(attack, block, combo, false, attributes, itemStack);
             }
         }
