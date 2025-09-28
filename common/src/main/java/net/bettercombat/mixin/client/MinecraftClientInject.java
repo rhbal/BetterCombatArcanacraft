@@ -318,7 +318,13 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     }
 
     private void cancelSwingIfNeeded() {
-        if (upswingStack != null && !areItemStackEqual(player.getMainHandStack(), upswingStack)) {
+        var state = PlayerInputState.get(player.getUuid());
+        boolean isStopBlockingAnimation
+                = ((PlayerAttackAnimatable) player).getAttackAnimation().name != null &&
+                ((PlayerAttackAnimatable) player).getAttackAnimation().name.contains("block") &&
+                InputManager.rightClick(state.getMask());
+
+        if (upswingStack != null && (!areItemStackEqual(player.getMainHandStack(), upswingStack) || isStopBlockingAnimation)) {
             cancelWeaponSwing();
             return;
         }

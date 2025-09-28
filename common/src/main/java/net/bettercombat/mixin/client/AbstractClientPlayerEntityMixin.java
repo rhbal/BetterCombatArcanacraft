@@ -158,6 +158,7 @@ public abstract class AbstractClientPlayerEntityMixin extends PlayerEntity imple
                     FirstPersonMode.THIRD_PERSON_MODEL :
                     FirstPersonMode.NONE);
             player.setFirstPersonConfiguration(firstPersonConfig(animatedHand));
+            attackAnimation.name = name;
             attackAnimation.base.replaceAnimationWithFade(
                     AbstractFadeModifier.standardFadeIn(fadeIn, Ease.INOUTSINE),
                     player);

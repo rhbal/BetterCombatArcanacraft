@@ -31,14 +31,4 @@ public class CustomAnimationPlayer extends KeyframeAnimationPlayer {
         }
         return super.getFirstPersonMode(tickDelta);
     }
-
-    @Override
-    public void tick() {
-        var mask = PlayerInputState.get(MinecraftClient.getInstance().player.getUuid()).getMask();
-        var isRightClicked = InputManager.rightClick(mask);
-        var isLastTick = getCurrentTick() == getData().returnToTick - 1;
-        if (!isRightClicked || !isLastTick) {
-            super.tick();
-        }
-    }
 }

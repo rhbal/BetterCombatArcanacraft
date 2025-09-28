@@ -10,6 +10,7 @@ public class AttackAnimationSubStack {
     public final MirrorModifier mirror = new MirrorModifier();
     public final ModifierLayer base = new ModifierLayer(null);
     public final AdjustmentModifier adjustmentModifier;
+    public String name;
 
     public AttackAnimationSubStack(AdjustmentModifier adjustmentModifier) {
         this.adjustmentModifier = adjustmentModifier;
