@@ -6,6 +6,8 @@ import com.google.common.collect.Multimap;
 import com.mojang.logging.LogUtils;
 import net.bettercombat.BetterCombat;
 import net.bettercombat.logic.*;
+import net.bettercombat.logic.dash.DashDirection;
+import net.bettercombat.logic.dash.DashManager;
 import net.bettercombat.logic.knockback.ConfigurableKnockback;
 import net.bettercombat.mixin.LivingEntityAccessor;
 import net.bettercombat.utils.MathHelper;
@@ -62,6 +64,18 @@ public class ServerNetwork {
             if (now - rate.getLastUpdateMs() < 80) return;
             rate.setLastUpdateMs(now);
             rate.setMask(packet.mask());
+
+            if (InputManager.dashKey(packet.mask())){
+                if(InputManager.d(packet.mask())){
+                    server.execute(()->{
+                        DashManager.doDash(player, DashDirection.LEFT, server.getTicks());
+                    });
+                } else if (InputManager.a(packet.mask())){
+                    server.execute(()->{
+                        DashManager.doDash(player,DashDirection.RIGHT, server.getTicks());
+                    });
+                }
+            }
         }));
 
         ServerPlayNetworking.registerGlobalReceiver(Packets.AttackAnimation.ID, (server, player, handler, buf, responseSender) -> {

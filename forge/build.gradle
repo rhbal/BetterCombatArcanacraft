@@ -9,6 +9,19 @@ loom {
     forge {
         mixinConfig "bettercombat.mixins.json"
     }
+    runs {
+        client {                    // это станет новым runClient
+            client()                // стандартная клиентская конфигурация Loom
+            configName = "Client"   // имя в IDE
+            runDir = "run"
+        }
+        secondClient {
+            client()
+            configName = "Second Client"
+            runDir = "run2"         // отдельная папка для второго клиента
+            programArgs '--username=User2'
+        }
+    }
 }
 
 architectury {
