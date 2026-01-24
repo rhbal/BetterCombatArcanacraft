@@ -1,5 +1,5 @@
 package net.bettercombat.logic.dash;
 
 public enum DashDirection {
-    LEFT, RIGHT
+    LEFT, RIGHT, FORWARD, BACKWARD
 }

@@ -14,15 +14,19 @@ import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.item.SwordItem;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(LivingEntity.class)
-public class LivingEntityMixin implements ConfigurableKnockback {
+public abstract class LivingEntityMixin implements ConfigurableKnockback {
 
     // FEATURE: Dual wielded attacking - Client side weapon cooldown for offhand
+
+    @Shadow
+    public abstract void takeKnockback(double strength, double x, double z);
 
     @Inject(method = "getAttributeValue(Lnet/minecraft/entity/attribute/EntityAttribute;)D", at = @At("HEAD"), cancellable = true)
     public void getAttributeValue_Inject(EntityAttribute attribute, CallbackInfoReturnable<Double> cir) {
@@ -71,12 +75,24 @@ public class LivingEntityMixin implements ConfigurableKnockback {
                         (InputManager.s(selfMask) && InputManager.s(attackerMask)) ||
                         (InputManager.notMoved(selfMask) && InputManager.notMoved(attackerMask))
                 ){
+                    applyKnockbackFrom(self,attacker,0.5);
                     cir.setReturnValue(true);
                 }
             } else {
                 cir.setReturnValue(true);
             }
         }
+    }
+
+    private void applyKnockbackFrom(LivingEntity target, Entity attacker, double strength) {
+        double dx = attacker.getX() - target.getX();
+        double dz = attacker.getZ() -target.getZ();
+        double len = Math.sqrt(dx * dx + dz * dz);
+        if (len < 1.0E-4) return;
+        dx /= len;
+        dz /= len;
+        target.takeKnockback(strength, dx, dz);
+        target.velocityModified = true;
     }
 
     private static boolean rightDirection(DamageSource source, LivingEntity self) {
