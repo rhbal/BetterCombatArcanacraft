@@ -21,3 +21,4 @@ public class WeaponHitBoxes {
         return null;
     }
 }
+

@@ -47,7 +47,7 @@ public class ColliderDebugRenderer {
         }
         var extendedClient = (MinecraftClient_BetterCombat)client;
         var comboCount = extendedClient.getComboCount();
-        var hand = PlayerAttackHelper.getCurrentAttack(client.player, comboCount);
+        var hand = PlayerAttackHelper.getAttackHand(client.player, comboCount);
         if (hand == null) {
             return;
         }

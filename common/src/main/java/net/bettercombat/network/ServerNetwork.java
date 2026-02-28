@@ -66,16 +66,16 @@ public class ServerNetwork {
 
             if (InputManager.dashKey(packet.mask())){
                 List<DashDirection> directions = new ArrayList<>();
-                if (InputManager.d(packet.mask())){
+                if (InputManager.backKey(packet.mask())){
                     directions.add(DashDirection.LEFT);
                 }
-                if (InputManager.a(packet.mask())){
+                if (InputManager.leftKey(packet.mask())){
                     directions.add(DashDirection.RIGHT);
                 }
-                if (InputManager.w(packet.mask())){
+                if (InputManager.forwardKey(packet.mask())){
                     directions.add(DashDirection.FORWARD);
                 }
-                if (InputManager.s(packet.mask())){
+                if (InputManager.rightKey(packet.mask())){
                     directions.add(DashDirection.BACKWARD);
                 }
                 server.execute(()->{
@@ -118,7 +118,7 @@ public class ServerNetwork {
                 return;
             }
             final var request = Packets.C2S_AttackRequest.read(buf);
-            final var hand = PlayerAttackHelper.getCurrentAttack(player, request.comboCount());
+            final var hand = PlayerAttackHelper.getAttackHand(player, request.comboCount());
             if (hand == null) {
                 LOGGER.error("Server handling Packets.C2S_AttackRequest - No current attack hand!");
                 LOGGER.error("Combo count: " + request.comboCount() + " is dual wielding: " + PlayerAttackHelper.isDualWielding(player));

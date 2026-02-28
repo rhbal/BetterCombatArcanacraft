@@ -23,7 +23,7 @@ public class EnchantmentMixin {
     private void getEquipmentFix(LivingEntity entity, CallbackInfoReturnable<Map<EquipmentSlot, ItemStack>> cir) {
         if(entity instanceof PlayerEntity player) {
             var comboCount = ((PlayerAttackProperties) player).getComboCount();
-            var currentHand = PlayerAttackHelper.getCurrentAttack(player, comboCount);
+            var currentHand = PlayerAttackHelper.getAttackHand(player, comboCount);
             // If striking with off-hand
             if (currentHand != null && currentHand.isOffHand()) {
                 // Getting enchant from off-hand stack

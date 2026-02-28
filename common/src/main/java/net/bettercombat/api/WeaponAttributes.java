@@ -2,6 +2,7 @@ package net.bettercombat.api;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -89,6 +90,21 @@ public final class WeaponAttributes {
      */
     //TODO rewrite docs
     private final Block[] blocks;
+    /**
+     * Specifies the sequence of blocks following each other, when the user is blocking continuously.
+     * (When last attack of the sequence is reached, it restarts)
+     * With a sequence of different attacks, you can create combos.
+     * Check out the member wise documentation of `Attack` (in this file), to see how they can be different.
+     *
+     * When using attribute inheritance, the inherited sequence of attacks can be reduced or extended.
+     * Example reducing (inherited attributes have a sequence of 3 attack):
+     *   "blocks": [ {}, {} ]
+     * Example of extending  (inherited attributes have a sequence of 2 attack):
+     *   "blocks": [ {}, {}, { ... my new fully parsable attack object ... } ]
+     * The properties of inherited attack objects can be overridden.
+     */
+    //TODO rewrite docs
+    private final Animation[] animations;
 
     public WeaponAttributes(
             double attack_range,
@@ -97,7 +113,8 @@ public final class WeaponAttributes {
             Boolean isTwoHanded,
             String category,
             Attack[] attacks,
-            Block[] blocks) {
+            Block[] blocks,
+            Animation[] animations) {
         this.attack_range = attack_range;
         this.pose = pose;
         this.off_hand_pose = off_hand_pose;
@@ -105,6 +122,203 @@ public final class WeaponAttributes {
         this.category = category;
         this.attacks = attacks;
         this.blocks = blocks;
+        this.animations = animations;
+    }
+
+    public static final class Animation {
+        private Condition condition;
+        private Action action;
+        private String animation;
+
+        public static final class Condition {
+            private String[] buttons;
+            private Trigger trigger;
+            private Order order;
+
+            public Condition() {
+            }
+
+            public Condition(String[] buttons, Trigger trigger, Order order) {
+                this.buttons = buttons;
+                this.trigger = trigger;
+                this.order = order;
+            }
+
+            public String[] getButtons() {
+                return buttons;
+            }
+
+            public Trigger getTrigger() {
+                return trigger;
+            }
+
+            public Order getOrder() {
+                return order;
+            }
+
+            @Override
+            public boolean equals(Object o) {
+                if (o == null || getClass() != o.getClass()) return false;
+                Condition condition = (Condition) o;
+                return Objects.deepEquals(buttons, condition.buttons) && Objects.equals(trigger, condition.trigger) && Objects.equals(order, condition.order);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(Arrays.hashCode(buttons), trigger, order);
+            }
+        }
+
+        public static final class Trigger {
+            private String isTriggered;
+            private String trigger;
+
+            public Trigger() {
+            }
+
+            public Trigger(String isTriggered, String trigger) {
+                this.isTriggered = isTriggered;
+                this.trigger = trigger;
+            }
+
+
+            public String getIsTriggered() {
+                return isTriggered;
+            }
+
+            public String getTrigger() {
+                return trigger;
+            }
+
+            @Override
+            public boolean equals(Object o) {
+                if (o == null || getClass() != o.getClass()) return false;
+                Trigger trigger1 = (Trigger) o;
+                return Objects.equals(isTriggered, trigger1.isTriggered) && Objects.equals(trigger, trigger1.trigger);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(isTriggered, trigger);
+            }
+        }
+
+        public static final class Order {
+            private int value;
+            private boolean lastAnimation;
+            private boolean random;
+
+            public Order() {
+            }
+
+            public Order(int value, boolean lastAnimation, boolean random) {
+                this.value = value;
+                this.lastAnimation = lastAnimation;
+                this.random = random;
+            }
+
+            public int getValue() {
+                return value;
+            }
+
+            public boolean isLastAnimation() {
+                return lastAnimation;
+            }
+
+            public boolean isRandom() {
+                return random;
+            }
+
+            @Override
+            public boolean equals(Object o) {
+                if (o == null || getClass() != o.getClass()) return false;
+                Order order = (Order) o;
+                return value == order.value && lastAnimation == order.lastAnimation && random == order.random;
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(value, lastAnimation, random);
+            }
+        }
+
+        public static final class Action {
+            private String name;
+            private int angle;
+            private int[] distance;
+            private String hitbox;
+
+            public Action() {
+            }
+
+            public Action(String name, int angle, int[] distance, String hitbox) {
+                this.name = name;
+                this.angle = angle;
+                this.distance = distance;
+                this.hitbox = hitbox;
+            }
+
+            public String getName() {
+                return name;
+            }
+
+            public int getAngle() {
+                return angle;
+            }
+
+            public int[] getDistance() {
+                return distance;
+            }
+
+            public String getHitbox() {
+                return hitbox;
+            }
+
+            @Override
+            public boolean equals(Object o) {
+                if (o == null || getClass() != o.getClass()) return false;
+                Action action = (Action) o;
+                return angle == action.angle && Objects.equals(name, action.name) && Objects.deepEquals(distance, action.distance) && Objects.equals(hitbox, action.hitbox);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(name, angle, Arrays.hashCode(distance), hitbox);
+            }
+        }
+
+        public Animation() {
+        }
+
+        public Animation(Condition condition, Action action, String animation) {
+            this.condition = condition;
+            this.action = action;
+            this.animation = animation;
+        }
+
+        public Condition condition() {
+            return condition;
+        }
+
+        public Action getAction() {
+            return action;
+        }
+
+        public String name() {
+            return animation;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            Animation animation1 = (Animation) o;
+            return Objects.equals(condition, animation1.condition) && Objects.equals(action, animation1.action) && Objects.equals(animation, animation1.animation);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(condition, action, animation);
+        }
     }
 
     public static final class Block {
@@ -137,7 +351,7 @@ public final class WeaponAttributes {
             return conditions;
         }
 
-        public String animation() {
+        public String name() {
             return animation;
         }
 
@@ -150,6 +364,18 @@ public final class WeaponAttributes {
             BLOCK_UP,
             BLOCK_BUTT,
             BLOCK_DEFAULT
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            Block block = (Block) o;
+            return Objects.deepEquals(conditions, block.conditions) && Objects.equals(animation, block.animation);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(Arrays.hashCode(conditions), animation);
         }
     }
 
@@ -272,7 +498,7 @@ public final class WeaponAttributes {
             return upswing;
         }
 
-        public String animation() {
+        public String name() {
             return animation;
         }
 
@@ -513,29 +739,40 @@ public final class WeaponAttributes {
         return blocks;
     }
 
+    public Animation[] animations() {
+        return animations;
+    }
+
     @Override
-    public boolean equals(Object obj) {
-        if (obj == this) return true;
-        if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (WeaponAttributes) obj;
-        return Double.doubleToLongBits(this.attack_range) == Double.doubleToLongBits(that.attack_range) &&
-                Objects.equals(this.pose, that.pose) &&
-                Objects.equals(this.two_handed, that.two_handed) &&
-                Objects.equals(this.attacks, that.attacks);
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        WeaponAttributes that = (WeaponAttributes) o;
+        return Double.compare(attack_range, that.attack_range) == 0 &&
+                Objects.equals(pose, that.pose) &&
+                Objects.equals(off_hand_pose, that.off_hand_pose) &&
+                Objects.equals(two_handed, that.two_handed) &&
+                Objects.equals(category, that.category) &&
+                Objects.deepEquals(attacks, that.attacks) &&
+                Objects.deepEquals(blocks, that.blocks) &&
+                Objects.deepEquals(animations, that.animations);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(attack_range, two_handed, attacks);
+        return Objects.hash(attack_range, two_handed, Arrays.hashCode(attacks), Arrays.hashCode(blocks), Arrays.hashCode(animations));
     }
 
     @Override
     public String toString() {
-        return "WeaponAttributes[" +
-                "attack_range=" + attack_range + ", " +
-                "pose=" + pose + ", " +
-                "isTwoHanded=" + two_handed + ", " +
-                "attacks=" + attacks + ']';
+        return "WeaponAttributes{" +
+                "attack_range=" + attack_range +
+                ", pose='" + pose + '\'' +
+                ", off_hand_pose='" + off_hand_pose + '\'' +
+                ", two_handed=" + two_handed +
+                ", category='" + category + '\'' +
+                ", attacks=" + Arrays.toString(attacks) +
+                ", blocks=" + Arrays.toString(blocks) +
+                ", animations=" + Arrays.toString(animations) +
+                '}';
     }
-
 }

@@ -37,7 +37,7 @@ public class WeaponAttributesHelper {
                         override.damageMultiplier() != 0 ? override.damageMultiplier() : base.damageMultiplier(),
                         override.angle() != 0 ? override.angle() : base.angle(),
                         override.upswing() != 0 ? override.upswing() : base.upswing(),
-                        override.animation() != null ? override.animation() : base.animation(),
+                        override.name() != null ? override.name() : base.name(),
                         override.swingSound() != null ? override.swingSound() : base.swingSound(),
                         override.impactSound() != null ? override.impactSound() : base.impactSound());
                 overrideAttacks.add(attack);
@@ -53,12 +53,12 @@ public class WeaponAttributesHelper {
                 var override = b.blocks()[i];
                 var block = new WeaponAttributes.Block(
                         override.conditions() != null ? override.conditions() : base.conditions(),
-                        override.animation() != null ? override.animation() : base.animation());
+                        override.name() != null ? override.name() : base.name());
                 overrideBlocks.add(block);
             }
             blocks = overrideBlocks.toArray(new WeaponAttributes.Block[0]);
         }
-        return new WeaponAttributes(attackRange, pose, off_hand_pose, isTwoHanded, category, attacks, blocks);
+        return new WeaponAttributes(attackRange, pose, off_hand_pose, isTwoHanded, category, attacks, blocks, b.animations());
     }
 
     public static void validate(WeaponAttributes attributes) throws Exception {
@@ -92,7 +92,7 @@ public class WeaponAttributesHelper {
         if (attack.upswing() < 0) {
             throw new InvalidObjectException("Invalid `upswing`");
         }
-        if (attack.animation() == null || attack.animation().length() == 0) {
+        if (attack.name() == null || attack.name().length() == 0) {
             throw new InvalidObjectException("Undefined `animation`");
         }
     }

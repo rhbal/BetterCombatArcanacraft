@@ -292,17 +292,25 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         this.lastSwingDuration = attackCooldownTicksFloat;
         this.itemUseCooldown = attackCooldownTicks; // Vanilla MinecraftClient property for compatibility
         setMiningCooldown(attackCooldownTicks);
-//        System.out.println("Starting upswingTicks: " + upswingTicks);
         String animationName;
         boolean isOffHand = hand.isOffHand();
         var animatedHand = AnimatedHand.from(isOffHand, attributes.isTwoHanded());
         var animatablePlayer = ((PlayerAttackAnimatable) player);
         if (isAttack) {
             this.upswingTicks = Math.max(Math.round(attackCooldownTicksFloat * upswingRate), 1); // At least 1 upswing ticks
-            animationName = hand.attack().animation();
+            animationName = hand.attack().name();
+            if(hand.animation() != null ){
+                animationName = hand.animation().name();
+            }
             animatablePlayer.playAttackAnimation(animationName, animatedHand, attackCooldownTicksFloat, upswingRate);
         } else {
-            animationName = hand.block().animation();
+            animationName = hand.block().name();
+            if(hand.animation() != null ){
+                animationName = hand.animation().name();
+            }
+            if(hand.animation() != null ){
+                animationName = hand.animation().name();
+            }
             var customAnimation = (CustomAnimationPlayer) animatablePlayer.getAttackAnimation().base.getAnimation();
             var animationNameWithoutNamespace = "\"" + (animationName.indexOf(':') >= 0 ? animationName.substring(animationName.indexOf(':') + 1) : animationName).stripLeading() + "\"";
             if (customAnimation == null ||
@@ -320,18 +328,51 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         });
     }
 
+    private void startAnimationIfNeeded(){
+        var hand = getCurrentHand();
+        if (hand == null || hand.animation() == null) {
+            return;
+        }
+        var animationName = hand.animation().name();
+        var animatablePlayer = ((PlayerAttackAnimatable) player);
+        boolean isOffHand = hand.isOffHand();
+        var animatedHand = AnimatedHand.from(isOffHand, false);
+        float attackCooldownTicksFloat = PlayerAttackHelper.getAttackCooldownTicksCapped(player); // `getAttackCooldownProgressPerTick` should be called `getAttackCooldownLengthTicks`
+        float upswingRate = (float) hand.upswingRate();
+        var currentAnimation = ((PlayerAttackAnimatable) player).getAttackAnimation();
+        if (upswingTicks > 0
+                || attackCooldown > 0
+                || player.isUsingItem()
+                || player.getAttackCooldownProgress(0) < (1.0 - upswingRate)
+                || (
+                        currentAnimation != null && currentAnimation.base.isActive()
+                        && Objects.equals(currentAnimation.name, animationName)
+                )) {
+            return;
+        }
+
+        animatablePlayer.playAttackAnimation(animationName, animatedHand, attackCooldownTicksFloat, upswingRate);
+        ClientPlayNetworking.send(
+                Packets.AttackAnimation.ID,
+                new Packets.AttackAnimation(player.getId(), animatedHand, animationName, attackCooldownTicksFloat, upswingRate).write());
+    }
+
     private void cancelSwingIfNeeded() {
         var state = PlayerInputState.get(player.getUuid());
+        var currentAnimation = ((PlayerAttackAnimatable) player).getAttackAnimation();
         boolean isStopBlockingAnimation
-                = ((PlayerAttackAnimatable) player).getAttackAnimation().name != null &&
-                ((PlayerAttackAnimatable) player).getAttackAnimation().name.contains("block") &&
-                !InputManager.rightClick(state.getMask());
+                = currentAnimation.name != null &&
+                (currentAnimation.name.contains("block") &&
+                !InputManager.rightClick(state.getMask()));
 
-        boolean isChangeBlockingAnimation
-                = ((PlayerAttackAnimatable) player).getAttackAnimation().name != null &&
-                !((PlayerAttackAnimatable) player).getAttackAnimation().name.contains(InputManager.asString(state.getMask()));
+        boolean isStopAnimation = false;
+        var hand = getCurrentHand();
+        if (upswingStack == null && currentAnimation.base.isActive() && (hand == null || hand.animation() == null)) {
+            isStopAnimation = true;
+        }
 
-        if (upswingStack != null && (!areItemStackEqual(player.getMainHandStack(), upswingStack) || isStopBlockingAnimation)) {
+
+        if (upswingStack != null && (!areItemStackEqual(player.getMainHandStack(), upswingStack)) || isStopBlockingAnimation || isStopAnimation) {
             cancelWeaponSwing();
             return;
         }
@@ -377,7 +418,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
 
     private void updateTargetsIfNeeded() {
         if (shouldUpdateTargetsInReach()) {
-            var hand = PlayerAttackHelper.getCurrentAttack(player, getComboCount());
+            var hand = PlayerAttackHelper.getAttackHand(player, getComboCount());
             WeaponAttributes attributes = WeaponRegistry.getAttributes(player.getMainHandStack());
             List<Entity> targets = List.of();
             if (attributes != null && attributes.attacks() != null) {
@@ -402,6 +443,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         attackFromUpswingIfNeeded();
         updateTargetsIfNeeded();
         resetComboIfNeeded();
+        startAnimationIfNeeded();
     }
 
     @Inject(method = "tick", at = @At("TAIL"))
@@ -438,7 +480,6 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         if (player.getAttackCooldownProgress(0) < (1.0 - upswingRate)) {
             return;
         }
-        // System.out.println("Attack with CD: " + client.player.getAttackCooldownProgress(0));
 
         var cursorTarget = getCursorTarget();
         List<Entity> targets = TargetFinder.findAttackTargets(
@@ -471,7 +512,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     }
 
     private AttackHand getCurrentHand() {
-        return PlayerAttackHelper.getCurrentAttack(player, getComboCount());
+        return PlayerAttackHelper.getAttackHand(player, getComboCount());
     }
 
     private void setComboCount(int comboCount) {

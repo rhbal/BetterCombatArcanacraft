@@ -69,10 +69,10 @@ public abstract class LivingEntityMixin implements ConfigurableKnockback {
             Entity attacker = source.getAttacker();
             if (attacker instanceof PlayerEntity) {
                 int attackerMask = PlayerInputState.get(attacker.getUuid()).getMask();
-                if((InputManager.a(selfMask) && InputManager.d(attackerMask)) ||
-                        (InputManager.d(selfMask) && InputManager.a(attackerMask)) ||
-                        (InputManager.w(selfMask) && InputManager.w(attackerMask)) ||
-                        (InputManager.s(selfMask) && InputManager.s(attackerMask)) ||
+                if((InputManager.leftKey(selfMask) && InputManager.backKey(attackerMask)) ||
+                        (InputManager.backKey(selfMask) && InputManager.leftKey(attackerMask)) ||
+                        (InputManager.forwardKey(selfMask) && InputManager.forwardKey(attackerMask)) ||
+                        (InputManager.rightKey(selfMask) && InputManager.rightKey(attackerMask)) ||
                         (InputManager.notMoved(selfMask) && InputManager.notMoved(attackerMask))
                 ){
                     applyKnockbackFrom(self,attacker,0.5);

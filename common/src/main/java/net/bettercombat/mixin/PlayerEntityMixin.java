@@ -54,7 +54,7 @@ public abstract class PlayerEntityMixin implements PlayerAttackProperties, Entit
         }
 
         var player = ((PlayerEntity) ((Object)this));
-        var currentHand = PlayerAttackHelper.getCurrentAttack(player, comboCount);
+        var currentHand = PlayerAttackHelper.getAttackHand(player, comboCount);
         if (currentHand != null) {
             // Disable sweeping
             return false;
@@ -150,7 +150,7 @@ public abstract class PlayerEntityMixin implements PlayerAttackProperties, Entit
             index = 0)
     public Hand getHand(Hand hand) {
         var player = ((PlayerEntity) ((Object)this) );
-        var currentHand = PlayerAttackHelper.getCurrentAttack(player, comboCount);
+        var currentHand = PlayerAttackHelper.getAttackHand(player, comboCount);
         if (currentHand != null) {
             return currentHand.isOffHand() ? Hand.OFF_HAND : Hand.MAIN_HAND;
         } else {
@@ -171,7 +171,7 @@ public abstract class PlayerEntityMixin implements PlayerAttackProperties, Entit
             // Vanilla behaviour
             return instance.getMainHandStack();
         }
-        var hand = PlayerAttackHelper.getCurrentAttack(instance, comboCount);
+        var hand = PlayerAttackHelper.getAttackHand(instance, comboCount);
         if (hand == null) {
             var isOffHand = PlayerAttackHelper.shouldAttackWithOffHand(instance, comboCount);
             if (isOffHand) {
@@ -197,7 +197,7 @@ public abstract class PlayerEntityMixin implements PlayerAttackProperties, Entit
         // `handArg` argument is always `MAIN`, we can ignore it
         AttackHand hand = lastAttack;
         if (hand == null) {
-            hand = PlayerAttackHelper.getCurrentAttack(instance, comboCount);
+            hand = PlayerAttackHelper.getAttackHand(instance, comboCount);
         }
         if (hand == null) {
             instance.setStackInHand(handArg, itemStack);
@@ -215,6 +215,6 @@ public abstract class PlayerEntityMixin implements PlayerAttackProperties, Entit
             return null;
         }
         var player = ((PlayerEntity) ((Object)this));
-        return PlayerAttackHelper.getCurrentAttack(player, comboCount);
+        return PlayerAttackHelper.getAttackHand(player, comboCount);
     }
 }

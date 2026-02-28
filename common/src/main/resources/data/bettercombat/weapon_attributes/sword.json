@@ -122,6 +122,61 @@
           "pitch": 1.2
         }
       }
+    ],
+    "animations": [
+      {
+        "condition": {
+          "buttons": [
+            "sneakKey"
+          ],
+          "trigger": {
+            "isTriggered": "nameOfTrigger",
+            "trigger": "nameOfTrigger"
+          },
+          "order": {
+            "value": 1,
+            "lastAnimation": true,
+            "random": true
+          }
+        },
+        "action": {
+          "name": "attack",
+          "angle": 120,
+          "distance": [
+            0,
+            60
+          ],
+          "hitbox": "FORWARD_BOX"
+        },
+        "animation": "bettercombat:one_handed_slash_horizontal_right"
+      },
+      {
+        "condition": {
+          "buttons": [
+            "forwardKey",
+            "attackKey"
+          ],
+          "trigger": {
+            "isTriggered": "nameOfTrigger",
+            "trigger": "nameOfTrigger"
+          },
+          "order": {
+            "value": 1,
+            "lastAnimation": true,
+            "random": true
+          }
+        },
+        "action": {
+          "name": "attack",
+          "angle": 120,
+          "distance": [
+            0,
+            60
+          ],
+          "hitbox": "FORWARD_BOX"
+        },
+        "animation": "bettercombat:one_handed_slash_horizontal_left"
+      }
     ]
   }
 }
