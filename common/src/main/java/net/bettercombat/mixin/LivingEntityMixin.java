@@ -1,10 +1,12 @@
 package net.bettercombat.mixin;
 
+import net.bettercombat.api.MinecraftClient_BetterCombat;
 import net.bettercombat.logic.InputManager;
 import net.bettercombat.logic.PlayerAttackHelper;
 import net.bettercombat.logic.PlayerAttackProperties;
 import net.bettercombat.logic.PlayerInputState;
 import net.bettercombat.logic.knockback.ConfigurableKnockback;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttribute;
@@ -52,6 +54,18 @@ public abstract class LivingEntityMixin implements ConfigurableKnockback {
     @Override
     public void setKnockbackMultiplier_BetterCombat(float value) {
         customKnockbackMultiplier_BetterCombat = value;
+    }
+
+    @Inject(method = "damage", at = @At("HEAD"))
+    private void onDamage(DamageSource source, float amount,
+                          CallbackInfoReturnable<Boolean> cir) {
+        LivingEntity self = (LivingEntity) (Object) this;
+
+        if (!(self instanceof PlayerEntity)) return;
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null || client.world == null) return;
+        ((MinecraftClient_BetterCombat) client).onLocalPlayerHurt();
     }
 
 

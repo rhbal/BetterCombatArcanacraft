@@ -3,9 +3,9 @@
   "author": "Daniil",
   "description": "One hand butt attack",
   "emote": {
-    "isLoop": "true",
+    "isLoop": "false",
     "returnTick": 6,
-    "beginTick": 0,
+    "beginTick": 5,
     "endTick": 990,
     "stopTick": 1000,
     "degrees": false,

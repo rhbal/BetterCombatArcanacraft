@@ -36,20 +36,76 @@ public class CustomAnimationPlayer extends KeyframeAnimationPlayer {
 
     @Override
     public @NotNull FirstPersonMode getFirstPersonMode(float tickDelta) {
-        if (isWindingDown(tickDelta)) {
+        boolean winding = isWindingDown(tickDelta);
+        if (isFrozen()) {
+            // #region agent log
+            var superMode = super.getFirstPersonMode(tickDelta);
+            try { var f = new java.io.FileWriter("debug-85875b.log", true); f.write("{\"loc\":\"getFPMode\",\"tickDelta\":" + tickDelta + ",\"isWinding\":" + winding + ",\"superMode\":\"" + superMode + "\",\"ts\":" + System.currentTimeMillis() + "}\n"); f.close(); } catch(Exception ignored) {}
+            // #endregion
+            if (winding) return FirstPersonMode.NONE;
+            return superMode;
+        }
+        if (winding) {
             return FirstPersonMode.NONE;
         }
         return super.getFirstPersonMode(tickDelta);
     }
 
+    public static float frozenPitch = 0.0f;
+    public static boolean blockFrozen = false;
+
+    private boolean isFrozen() {
+        if (!name.contains("block") || getTick() < getData().endTick) {
+            blockFrozen = false;
+            return false;
+        }
+        var mc = MinecraftClient.getInstance();
+        if (mc.player == null) return false;
+        var state = PlayerInputState.get(mc.player.getUuid());
+        if (state != null && InputManager.rightClick(state.getMask())) {
+            if (!blockFrozen) {
+                frozenPitch = mc.player.getPitch();
+                blockFrozen = true;
+                // #region agent log
+                try { var f = new java.io.FileWriter("debug-85875b.log", true); f.write("{\"loc\":\"isFrozen\",\"msg\":\"freeze onset\",\"frozenPitch\":" + frozenPitch + ",\"ts\":" + System.currentTimeMillis() + "}\n"); f.close(); } catch(Exception ignored) {}
+                // #endregion
+            }
+            return true;
+        }
+        // #region agent log H3 — rightClick became false while animation is at endTick
+        try { var f = new java.io.FileWriter("debug-85875b.log", true); f.write("{\"loc\":\"isFrozen\",\"msg\":\"unfreeze\",\"tick\":" + getTick() + ",\"mask\":" + (state != null ? state.getMask() : -1) + ",\"ts\":" + System.currentTimeMillis() + "}\n"); f.close(); } catch(Exception ignored) {}
+        // #endregion
+        blockFrozen = false;
+        return false;
+    }
+
     @Override
     public void tick() {
-        var mask = PlayerInputState.get(MinecraftClient.getInstance().player.getUuid()).getMask();
-        var isRightClicked = InputManager.rightClick(mask);
-        var vector = InputManager.asString(mask);
-        var isLastTick = getCurrentTick() >= getData().returnToTick - 1 && name!=null && name.contains("block") && name.contains(vector);
-        if (!isRightClicked || !isLastTick) {
-            super.tick();
+        if (isFrozen()) return;
+        super.tick();
+    }
+
+    // Track previous headYaw for per-frame delta
+    private static float prevHeadYawForLog = 0f;
+
+    @Override
+    public void setupAnim(float tickDelta) {
+        if (isFrozen()) {
+            var mc = MinecraftClient.getInstance();
+            if (mc.player != null) {
+                float headYaw = mc.player.getHeadYaw();
+                float bodyYawBefore = mc.player.bodyYaw;
+                float headYawDelta = headYaw - prevHeadYawForLog;
+                prevHeadYawForLog = headYaw;
+                // #region agent log — only log when body is significantly off
+                if (Math.abs(headYaw - bodyYawBefore) > 0.5f) { try { var f = new java.io.FileWriter("debug-85875b.log", true); f.write("{\"loc\":\"setupAnim\",\"inDelta\":" + tickDelta + ",\"bodyBefore\":" + bodyYawBefore + ",\"headYaw\":" + headYaw + ",\"diff\":" + Math.abs(headYaw - bodyYawBefore) + ",\"ts\":" + System.currentTimeMillis() + "}\n"); f.close(); } catch(Exception ignored) {} }
+                // #endregion
+                mc.player.bodyYaw = headYaw;
+                mc.player.prevBodyYaw = headYaw;
+            }
+            super.setupAnim(0.0f);
+            return;
         }
+        super.setupAnim(tickDelta);
     }
 }

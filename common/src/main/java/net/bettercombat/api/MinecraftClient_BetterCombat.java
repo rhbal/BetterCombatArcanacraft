@@ -30,4 +30,5 @@ public interface MinecraftClient_BetterCombat {
         return getSwingProgress() < 1F;
     }
     void cancelUpswing();
+    void onLocalPlayerHurt();
 }

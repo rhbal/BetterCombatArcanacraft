@@ -1,9 +1,11 @@
 package net.bettercombat.logic;
 
+import joptsimple.internal.Strings;
 import net.bettercombat.BetterCombat;
 import net.bettercombat.api.AttackHand;
 import net.bettercombat.api.ComboState;
 import net.bettercombat.api.WeaponAttributes;
+import net.bettercombat.client.animation.PlayerAttackAnimatable;
 import net.bettercombat.utils.ResettableCounter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
@@ -13,6 +15,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static net.minecraft.entity.EquipmentSlot.MAINHAND;
 
@@ -20,6 +26,7 @@ public class PlayerAttackHelper {
 
     public static final Logger LOGGER = LogManager.getLogger(PlayerAttackHelper.class);
     public static final ResettableCounter<AttackHand> resettableCounter = new ResettableCounter<>();
+    public static final Map<String,Integer> animationOrderMap = new HashMap<>();
 
     public static float getDualWieldingAttackDamageMultiplier(PlayerEntity player, AttackHand hand) {
         return isDualWielding(player)
@@ -160,14 +167,64 @@ public class PlayerAttackHelper {
         var animations = attributes.animations();
         animations = Arrays.stream(animations)
                 .filter(animation ->
-                        animation.condition() == null
-                                || evaluateAnimationConditions(animation.condition(), player, isOffHandAttack)
+                        (animation.condition() == null || animation.condition().getTrigger() == null)
+                                && (animation.condition() == null
+                                        || evaluateAnimationConditions(animation.condition(), player, isOffHandAttack))
                 )
                 .toArray(WeaponAttributes.Animation[]::new);
         if (animations != null && animations.length > 0) {
-            return new AnimationSelection(animations[0]);
+            var pressedButtons = String.join("", animations[0].condition().getButtons());
+            animations = Arrays.stream(animations)
+                    .sorted(Comparator.comparing(animation -> animation.condition().getOrder()))
+                    .toArray(WeaponAttributes.Animation[]::new);
+            var firstOrder = animations[0].condition() != null ? animations[0].condition().getOrder() : null;
+            if (firstOrder != null && firstOrder.isRandom()) {
+                var randomIndex = ThreadLocalRandom.current().nextInt(animations.length);
+                return new AnimationSelection(animations[randomIndex]);
+            }
+            var currentIndex = animationOrderMap.getOrDefault(pressedButtons, 0);
+            return new AnimationSelection(animations[currentIndex % animations.length]);
         }
         return null;
+    }
+
+    public static void advanceAnimation(WeaponAttributes attributes, PlayerEntity player, boolean isOffHand) {
+        var animations = attributes.animations();
+        if (animations == null || animations.length == 0) return;
+        animations = Arrays.stream(animations)
+                .filter(animation ->
+                        (animation.condition() == null || animation.condition().getTrigger() == null)
+                                && (animation.condition() == null
+                                        || evaluateAnimationConditions(animation.condition(), player, isOffHand))
+                )
+                .sorted(Comparator.comparing(animation -> animation.condition().getOrder()))
+                .toArray(WeaponAttributes.Animation[]::new);
+        if (animations.length < 2) return;
+        var firstOrder = animations[0].condition() != null ? animations[0].condition().getOrder() : null;
+        if (firstOrder != null && firstOrder.isRandom()) return;
+        var pressedButtons = String.join("", animations[0].condition().getButtons());
+        var current = animationOrderMap.getOrDefault(pressedButtons, 0);
+        animationOrderMap.put(pressedButtons, (current + 1) % animations.length);
+    }
+
+    public static WeaponAttributes.Animation selectTriggeredAnimation(WeaponAttributes attributes, PlayerEntity player, boolean isOffHand, String triggerName) {
+        var animations = attributes.animations();
+        if (animations == null) return null;
+        var matching = Arrays.stream(animations)
+                .filter(animation ->
+                        animation.condition() != null
+                                && animation.condition().getTrigger() != null
+                                && triggerName.equals(animation.condition().getTrigger().getIsTriggered())
+                                && evaluateAnimationConditions(animation.condition(), player, isOffHand)
+                )
+                .toArray(WeaponAttributes.Animation[]::new);
+        if (matching.length == 0) return null;
+        if (matching.length == 1) return matching[0];
+        var firstOrder = matching[0].condition().getOrder();
+        if (firstOrder != null && firstOrder.isRandom()) {
+            return matching[ThreadLocalRandom.current().nextInt(matching.length)];
+        }
+        return matching[0];
     }
 
     private static boolean evaluateBlockConditions(WeaponAttributes.Block.Condition[] conditions, PlayerEntity player, boolean isOffHandAttack) {

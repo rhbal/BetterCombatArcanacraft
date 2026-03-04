@@ -308,14 +308,10 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
             if(hand.animation() != null ){
                 animationName = hand.animation().name();
             }
-            if(hand.animation() != null ){
-                animationName = hand.animation().name();
-            }
             var customAnimation = (CustomAnimationPlayer) animatablePlayer.getAttackAnimation().base.getAnimation();
-            var animationNameWithoutNamespace = "\"" + (animationName.indexOf(':') >= 0 ? animationName.substring(animationName.indexOf(':') + 1) : animationName).stripLeading() + "\"";
             if (customAnimation == null ||
-                    !Objects.equals(customAnimation.getData().extraData.get("name"), animationNameWithoutNamespace) ||
                     !animatablePlayer.getAttackAnimation().base.isActive()) {
+                LOGGER.debug("play animation: "+animationName);
                 animatablePlayer.playAttackAnimation(animationName, animatedHand, attackCooldownTicksFloat, upswingRate);
             }
         }
@@ -326,6 +322,28 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         BetterCombatClientEvents.ATTACK_START.invoke(handler -> {
             handler.onPlayerAttackStart(player, hand);
         });
+    }
+
+    @Override
+    public void onLocalPlayerHurt() {
+        playTriggeredAnimationIfNeeded("attacked");
+    }
+
+    private void playTriggeredAnimationIfNeeded(String triggerName) {
+        if (!BetterCombatClient.ENABLED) return;
+        var hand = getCurrentHand();
+        if (hand == null || hand.attributes() == null || hand.attributes().animations() == null) return;
+        boolean isOffHand = hand.isOffHand();
+        var animation = PlayerAttackHelper.selectTriggeredAnimation(hand.attributes(), player, isOffHand, triggerName);
+        if (animation == null) return;
+        var animationName = animation.name();
+        float attackCooldownTicksFloat = PlayerAttackHelper.getAttackCooldownTicksCapped(player);
+        float upswingRate = hand.attack() != null ? (float) hand.upswingRate() : 0;
+        var animatedHand = AnimatedHand.from(isOffHand, false);
+        ((PlayerAttackAnimatable) player).playAttackAnimation(animationName, animatedHand, attackCooldownTicksFloat, upswingRate);
+        ClientPlayNetworking.send(
+                Packets.AttackAnimation.ID,
+                new Packets.AttackAnimation(player.getId(), animatedHand, animationName, attackCooldownTicksFloat, upswingRate).write());
     }
 
     private void startAnimationIfNeeded(){
@@ -346,9 +364,13 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
                 || player.getAttackCooldownProgress(0) < (1.0 - upswingRate)
                 || (
                         currentAnimation != null && currentAnimation.base.isActive()
-                        && Objects.equals(currentAnimation.name, animationName)
                 )) {
             return;
+        }
+
+
+        if (hand.animation() != null) {
+            PlayerAttackHelper.advanceAnimation(hand.attributes(), player, isOffHand);
         }
 
         animatablePlayer.playAttackAnimation(animationName, animatedHand, attackCooldownTicksFloat, upswingRate);
@@ -372,7 +394,7 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
         }
 
 
-        if (upswingStack != null && (!areItemStackEqual(player.getMainHandStack(), upswingStack)) || isStopBlockingAnimation || isStopAnimation) {
+        if (upswingStack != null && (!areItemStackEqual(player.getMainHandStack(), upswingStack)) || isStopBlockingAnimation) {
             cancelWeaponSwing();
             return;
         }
@@ -535,6 +557,9 @@ public abstract class MinecraftClientInject implements MinecraftClient_BetterCom
     }
 
     private void cancelWeaponSwing() {
+        // #region agent log H4
+        try { var f = new java.io.FileWriter("debug-85875b.log", true); f.write("{\"loc\":\"cancelSwing\",\"frozen\":" + net.bettercombat.client.animation.CustomAnimationPlayer.blockFrozen + ",\"ts\":" + System.currentTimeMillis() + "}\n"); f.close(); } catch(Exception ignored) {}
+        // #endregion
         var downWind = (int) Math.round(PlayerAttackHelper.getAttackCooldownTicksCapped(player) * (1 - 0.5 * BetterCombat.config.upswing_multiplier));
         ((PlayerAttackAnimatable) player).stopAttackAnimation(downWind);
         ClientPlayNetworking.send(

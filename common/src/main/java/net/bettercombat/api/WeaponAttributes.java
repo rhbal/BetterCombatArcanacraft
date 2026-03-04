@@ -1,5 +1,6 @@
 package net.bettercombat.api;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
@@ -203,7 +204,7 @@ public final class WeaponAttributes {
             }
         }
 
-        public static final class Order {
+        public static final class Order implements Comparable<Order> {
             private int value;
             private boolean lastAnimation;
             private boolean random;
@@ -239,6 +240,11 @@ public final class WeaponAttributes {
             @Override
             public int hashCode() {
                 return Objects.hash(value, lastAnimation, random);
+            }
+
+            @Override
+            public int compareTo(@NotNull WeaponAttributes.Animation.Order o) {
+                return this.getValue() - o.getValue();
             }
         }
 

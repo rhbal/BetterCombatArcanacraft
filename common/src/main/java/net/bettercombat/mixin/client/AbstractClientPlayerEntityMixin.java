@@ -84,6 +84,12 @@ public abstract class AbstractClientPlayerEntityMixin extends PlayerEntity imple
                 || player.isUsingItem()
                 || Platform.isCastingSpell(player)
                 || CrossbowItem.isCharged(mainHandStack)) {
+            // #region agent log
+            if (CustomAnimationPlayer.blockFrozen || hasActiveAttackAnimation) {
+                String reason = player.handSwinging ? "handSwinging" : player.isSwimming() ? "swimming" : player.isUsingItem() ? "usingItem" : Platform.isCastingSpell(player) ? "castingSpell" : "crossbowCharged";
+                try { var f = new java.io.FileWriter("debug-85875b.log", true); f.write("{\"loc\":\"earlyReturn\",\"reason\":\"" + reason + "\",\"frozen\":" + CustomAnimationPlayer.blockFrozen + ",\"active\":" + hasActiveAttackAnimation + ",\"ts\":" + System.currentTimeMillis() + "}\n"); f.close(); } catch(Exception ignored) {}
+            }
+            // #endregion
             mainHandBodyPose.setPose(null, isLeftHanded);
             mainHandItemPose.setPose(null, isLeftHanded);
             offHandBodyPose.setPose(null, isLeftHanded);
@@ -94,7 +100,16 @@ public abstract class AbstractClientPlayerEntityMixin extends PlayerEntity imple
         // Restore auto body rotation upon swing - Fix issue #11
 
         if (hasActiveAttackAnimation) {
-            ((LivingEntityAccessor)player).invokeTurnHead(player.getHeadYaw(), 0);
+            if (CustomAnimationPlayer.blockFrozen) {
+                float headYaw = player.getHeadYaw();
+                // #region agent log
+                try { var f = new java.io.FileWriter("debug-85875b.log", true); f.write("{\"loc\":\"updateOnTick\",\"before\":" + player.bodyYaw + ",\"headYaw\":" + headYaw + ",\"diff\":" + Math.abs(headYaw - player.bodyYaw) + ",\"ts\":" + System.currentTimeMillis() + "}\n"); f.close(); } catch(Exception ignored) {}
+                // #endregion
+                player.bodyYaw = headYaw;
+                player.prevBodyYaw = headYaw;
+            } else {
+                ((LivingEntityAccessor)player).invokeTurnHead(player.getHeadYaw(), 0);
+            }
         }
 
         // Pose
@@ -179,7 +194,10 @@ public abstract class AbstractClientPlayerEntityMixin extends PlayerEntity imple
             float offsetZ = 0;
 
             if (FirstPersonMode.isFirstPersonPass()) {
-                var pitch = player.getPitch();
+                var pitch = CustomAnimationPlayer.blockFrozen ? CustomAnimationPlayer.frozenPitch : player.getPitch();
+                // #region agent log
+                if (CustomAnimationPlayer.blockFrozen && partName.equals("body")) { try { var f = new java.io.FileWriter("debug-85875b.log", true); f.write("{\"loc\":\"adjMod\",\"pass\":\"FP\",\"pitch\":" + pitch + ",\"realPitch\":" + player.getPitch() + ",\"ts\":" + System.currentTimeMillis() + "}\n"); f.close(); } catch(Exception ignored) {} }
+                // #endregion
                 pitch = (float) Math.toRadians(pitch);
                 switch (partName) {
                     case "body" -> {
@@ -198,7 +216,7 @@ public abstract class AbstractClientPlayerEntityMixin extends PlayerEntity imple
                     }
                 }
             } else {
-                var pitch = player.getPitch();
+                var pitch = CustomAnimationPlayer.blockFrozen ? CustomAnimationPlayer.frozenPitch : player.getPitch();
                 pitch = (float) Math.toRadians(pitch);
                 switch (partName) {
                     case "body" -> {
